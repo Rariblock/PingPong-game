@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TABLE TENNIS 3D</title>
+<style>
+:root{--cyan:#53e6ff;--lime:#b8ff72;--ink:#07131f}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07131f;color:#fff;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block}
+.hud{position:fixed;inset:0;pointer-events:none;padding:clamp(12px,3vw,28px);display:flex;flex-direction:column;justify-content:space-between}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.brand{font-size:clamp(12px,2vw,15px);letter-spacing:.22em;color:var(--cyan);font-weight:900}
+.sub{font-size:11px;color:#9bb1c4;letter-spacing:.12em;margin-top:4px}
+.scorebox{display:flex;align-items:center;gap:12px;background:#07131fbd;border:1px solid #ffffff25;border-radius:16px;padding:10px 16px;backdrop-filter:blur(8px)}
+.score{font-size:clamp(27px,6vw,44px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.dash{color:#6e899e;font-weight:700}
+.name{font-size:10px;letter-spacing:.12em;color:#a9c0d2;text-align:center;margin-top:4px}
+.panel{align-self:center;text-align:center;background:#07131fd9;border:1px solid #ffffff24;border-radius:18px;padding:14px 20px;max-width:min(92vw,440px);backdrop-filter:blur(10px);pointer-events:auto}
+#message{font-size:clamp(16px,3vw,22px);font-weight:850}
+#hint{font-size:12px;color:#a9c0d2;margin-top:5px;line-height:1.6}
+button{border:0;border-radius:999px;background:linear-gradient(110deg,#53e6ff,#b8ff72);color:#07131f;font-weight:900;padding:11px 22px;margin-top:12px;font-size:14px;cursor:pointer}
+.bottom{display:flex;justify-content:space-between;align-items:end;gap:10px;color:#b5c7d5;font-size:11px}
+.pill{background:#07131fbb;border:1px solid #ffffff25;border-radius:999px;padding:8px 12px}
+#status{color:var(--lime);font-weight:800}
+.controls{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:7px;width:min(94vw,620px);pointer-events:auto}
+.controls button{margin:0;padding:10px 13px;font-size:12px;background:#10283a;color:#eafaff;border:1px solid #53e6ff70;box-shadow:0 4px 18px #0005}
+.controls button.active{background:linear-gradient(110deg,#53e6ff,#b8ff72);color:#07131f;border-color:transparent}
+.controls .group{display:flex;gap:6px;padding:6px;background:#07131fc9;border:1px solid #ffffff22;border-radius:16px;backdrop-filter:blur(8px)}
+.controls .tag{align-self:center;font-size:10px;color:#a9c0d2;margin:0 2px}
+#adminOpen{position:fixed;right:12px;top:86px;z-index:20;margin:0;padding:9px 13px;background:#172f45;color:#b8ff72;border:1px solid #b8ff7270;font-size:11px;pointer-events:auto}
+#cheatPanel{position:fixed;z-index:30;right:10px;top:128px;width:min(300px,calc(100vw - 20px));max-height:calc(100dvh - 150px);overflow:auto;padding:14px;background:#07131ff2;border:1px solid #53e6ff80;border-radius:16px;backdrop-filter:blur(12px);box-shadow:0 12px 35px #0009;display:none;pointer-events:auto}
+#cheatPanel.open{display:block}#cheatPanel h3{margin:0 0 10px;color:var(--cyan);font-size:15px}
+.cheatrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #ffffff18;font-size:12px}
+.cheatrow label{display:flex;align-items:center;gap:8px;flex:1}.cheatrow input[type=checkbox]{width:19px;height:19px;accent-color:#b8ff72}
+.cheatrow input[type=range]{width:100px;accent-color:#53e6ff}.cheatval{min-width:34px;text-align:right;color:#b8ff72;font-variant-numeric:tabular-nums}
+#cheatPanel .adminclose{width:100%;margin-top:10px;background:#18364b;color:white;border:1px solid #53e6ff70}
+@media(max-width:560px){.bottom{font-size:10px}.bottom .desktop{display:none}.scorebox{padding:8px 12px}.panel{margin-bottom:16vh}.controls{bottom:55px;gap:5px}.controls button{padding:9px 10px;font-size:11px}.controls .group{gap:4px;padding:5px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div class="hud">
+ <div class="top">
+  <div><div class="brand">🏓 TABLE TENNIS / 3D</div><div class="sub">ARCADE MATCH · FIRST TO 11</div></div>
+  <div class="scorebox">
+   <div><div class="score" id="you">0</div><div class="name">YOU</div></div>
+   <div class="dash">:</div>
+   <div><div class="score" id="cpu">0</div><div class="name">CPU</div></div>
+  </div>
+ </div>
+ <div class="panel">
+  <div id="message">READY?</div>
+  <div id="hint">ドラッグでラケット操作。回転サーブを選び、ドライブ・スマッシュで11点先取！</div>
+  <button id="start">試合スタート</button>
+ </div>
+ <div class="bottom">
+  <div class="pill">操作：ドラッグ / マウス移動</div>
+  <div class="pill desktop">PC：← → ↑ ↓ または WASD</div>
+  <div class="pill">状態：<span id="status">待機中</span></div>
+ </div>
+</div>
+<div class="controls">
+ <div class="group"><span class="tag">サーブ</span>
+  <button data-serve="none" class="active">無回転</button>
+  <button data-serve="top">上回転</button>
+  <button data-serve="back">下回転</button>
+  <button data-serve="left">左横</button>
+  <button data-serve="right">右横</button>
+ </div>
+ <div class="group"><span class="tag">打球</span>
+  <button data-shot="drive" class="active">ドライブ</button>
+  <button data-shot="smash">スマッシュ</button>
+ </div>
+</div>
+<button id="adminOpen" type="button">⚙ ADMIN</button>
+<section id="cheatPanel" aria-label="管理者チートメニュー">
+ <h3>⚙ 管理者専用チート</h3>
+ <div class="cheatrow"><label><input id="cheatSpeed" type="checkbox">ボール速度変更</label><input id="speedRange" type="range" min="0.5" max="2.5" step="0.1" value="1.5"><span class="cheatval" id="speedVal">1.5x</span></div>
+ <div class="cheatrow"><label><input id="cheatSmash" type="checkbox">超強力スマッシュ</label><span class="cheatval">ON/OFF</span></div>
+ <div class="cheatrow"><label><input id="cheatNoLose" type="checkbox">失点無効化</label><span class="cheatval">ON/OFF</span></div>
+ <div class="cheatrow"><label><input id="cheatCpu" type="checkbox">CPUの強さ変更</label><input id="cpuRange" type="range" min="0" max="2.5" step="0.1" value="1"><span class="cheatval" id="cpuVal">1.0</span></div>
+ <div class="cheatrow"><label><input id="cheatSlow" type="checkbox">スローモーション</label><span class="cheatval">0.45x</span></div>
+ <div class="cheatrow"><label><input id="cheatWin" type="checkbox">必ず自分が得点</label><span class="cheatval">ON/OFF</span></div>
+ <button class="adminclose" id="adminClose" type="button">メニューを閉じる</button>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=>{
+const root=document.getElementById('game');
+if(!window.THREE){document.getElementById('message').textContent='3Dエンジンを読み込めません';document.getElementById('hint').textContent='インターネット接続を確認して再読み込みしてください。';return;}
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x07131f);scene.fog=new THREE.Fog(0x07131f,13,27);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,100);camera.position.set(0,8.8,12.8);camera.lookAt(0,0,0);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0x9bdcff,0x17202d,2));
+const key=new THREE.DirectionalLight(0xffffff,2.5);key.position.set(-4,10,7);key.castShadow=true;scene.add(key);
+const fill=new THREE.PointLight(0x36cfff,35,18);fill.position.set(5,5,-4);scene.add(fill);
+const mat=(c,r=.55,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),mat(0x0b1c2a,.9));floor.rotation.x=-Math.PI/2;floor.position.y=-.24;floor.receiveShadow=true;scene.add(floor);
+const tableMat=mat(0x087f9c,.42), white=mat(0xeafaff,.35), dark=mat(0x142d40,.45), netMat=mat(0xd7f4f7,.8), red=mat(0xff526b,.3), blue=mat(0x42cfff,.3), ballMat=mat(0xfff4a3,.25);
+const table=new THREE.Mesh(new THREE.BoxGeometry(5.4,.22,9.4),tableMat);table.position.y=0;table.castShadow=true;table.receiveShadow=true;scene.add(table);
+function line(w,h,d,x,y,z,material=white){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);scene.add(o);return o;}
+line(5.3,.025,.035,0,.125,0);line(.035,.025,9.3,0,.125,0);
+line(5.3,.025,.035,0,.125,4.62);line(5.3,.025,.035,0,.125,-4.62);
+for(let x of [-2.35,2.35])for(let z of [-4.1,4.1]){let leg=new THREE.Mesh(new THREE.BoxGeometry(.18,1,.18),dark);leg.position.set(x,-.58,z);leg.castShadow=true;scene.add(leg);}
+const net=new THREE.Mesh(new THREE.BoxGeometry(5.45,.62,.045),netMat);net.position.set(0,.54,0);net.castShadow=true;scene.add(net);
+for(let i=0;i<13;i++)line(.012,.59,.012,-2.55+i*.425,.54,.03,mat(0x7aa6b5));
+line(5.5,.06,.08,0,.88,0,dark);
+for(let x of [-2.8,2.8]){let post=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.9,12),blue);post.position.set(x,.48,0);scene.add(post);}
+const paddleGeo=new THREE.CylinderGeometry(.55,.55,.12,48);paddleGeo.rotateX(Math.PI/2);
+function paddle(color,z){let group=new THREE.Group();let face=new THREE.Mesh(paddleGeo,mat(color,.3));face.castShadow=true;group.add(face);let handle=new THREE.Mesh(new THREE.BoxGeometry(.2,.18,.7),mat(0x9b6039));handle.position.z=.37;group.add(handle);group.position.set(0,.65,z);scene.add(group);return group;}
+const player=paddle(0xff4f69,4.35), rival=paddle(0x3fcfff,-4.35);
+const ball=new THREE.Mesh(new THREE.SphereGeometry(.17,24,24),ballMat);ball.castShadow=true;scene.add(ball);
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(.25,24),new THREE.MeshBasicMaterial({color:0x00111a,transparent:true,opacity:.3}));shadow.rotation.x=-Math.PI/2;shadow.position.y=.125;scene.add(shadow);
+const youEl=document.getElementById('you'),cpuEl=document.getElementById('cpu'),message=document.getElementById('message'),hint=document.getElementById('hint'),startBtn=document.getElementById('start'),status=document.getElementById('status');
+let you=0,cpu=0,playing=false,serveTimer=0,ballVel=new THREE.Vector3(),playerX=0,playerZ=4.35,targetX=0,targetY=.65,keys={},last=performance.now(),hitCooldown=0,spinX=0,spinY=0,serveType='none',shotType='drive',server='you';
+const cheats={speed:false,smash:false,noLose:false,cpu:false,slow:false,win:false};
+const $=id=>document.getElementById(id);
+$('adminOpen').addEventListener('click',()=>$('cheatPanel').classList.toggle('open'));
+$('adminClose').addEventListener('click',()=>$('cheatPanel').classList.remove('open'));
+[['cheatSpeed','speed'],['cheatSmash','smash'],['cheatNoLose','noLose'],['cheatCpu','cpu'],['cheatSlow','slow'],['cheatWin','win']].forEach(([id,key])=>$(id).addEventListener('change',e=>{cheats[key]=e.target.checked;}));
+$('speedRange').addEventListener('input',e=>$('speedVal').textContent=Number(e.target.value).toFixed(1)+'x');
+$('cpuRange').addEventListener('input',e=>$('cpuVal').textContent=Number(e.target.value).toFixed(1));
+function updateScore(){youEl.textContent=you;cpuEl.textContent=cpu;}
+function resetBall(){
+ spinX=0;spinY=0;hitCooldown=0;serveTimer=.65;
+ if(server==='you'){
+  ball.position.set(player.position.x,.95,3.45);
+  ballVel.set(0,.055,-.14);
+  const t=serveType;
+  if(t==='left')spinX=-.19; if(t==='right')spinX=.19;
+  if(t==='top')spinY=.24; if(t==='back')spinY=-.20;
+ }else{
+  ball.position.set(rival.position.x,.95,-3.45);
+  ballVel.set((Math.random()-.5)*.06,.05,.14);
+  const types=['top','back','left','right'];const t=types[Math.floor(Math.random()*types.length)];
+  if(t==='left')spinX=-.17;if(t==='right')spinX=.17;
+  if(t==='top')spinY=.22;if(t==='back')spinY=-.18;
+  hint.textContent='CPUの回転サーブ！軌道を見て返そう。';
+ }
+}
+function point(who){if(!playing)return;
+ if(who==='cpu'&&cheats.win)who='you';
+ if(who==='cpu'&&cheats.noLose){server='you';message.textContent='失点無効！';hint.textContent='失点無効チートが発動。ラリーを続けよう！';status.textContent='試合中';resetBall();return;}
+ if(who==='you')you++;else cpu++;updateScore();playing=false;status.textContent='得点';if(you>=11||cpu>=11){message.textContent=you>cpu?'YOU WIN! 🏆':'CPU WIN';hint.textContent='試合終了！もう一度プレイできるよ。';startBtn.textContent='もう一度プレイ';}else{message.textContent=who==='you'?'ポイント！':'CPUポイント';hint.textContent='次のラリーを始めよう！';startBtn.textContent='次のラリー';}startBtn.style.display='inline-block';}
+function begin(){if(you>=11||cpu>=11){you=0;cpu=0;updateScore();}playing=true;server=(Math.floor((you+cpu)/2)%2===0)?'you':'cpu';message.textContent=server==='you'?'YOU SERVE!':'CPU SERVE!';hint.textContent=server==='you'?'回転を選んでサーブ！':'CPUのサーブをレシーブしよう！';startBtn.style.display='none';status.textContent='試合中';resetBall();}
+startBtn.addEventListener('click',begin);
+document.querySelectorAll('[data-serve]').forEach(b=>b.addEventListener('click',()=>{
+ serveType=b.dataset.serve;
+ document.querySelectorAll('[data-serve]').forEach(x=>x.classList.toggle('active',x===b));
+}));
+document.querySelectorAll('[data-shot]').forEach(b=>b.addEventListener('click',()=>{
+ shotType=b.dataset.shot;
+ document.querySelectorAll('[data-shot]').forEach(x=>x.classList.toggle('active',x===b));
+}));
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function setPointer(e){const r=renderer.domElement.getBoundingClientRect();let nx=((e.clientX-r.left)/r.width)*2-1,ny=-((e.clientY-r.top)/r.height)*2+1;targetX=clamp(nx*3.0,-2.1,2.1);targetY=clamp(.75+ny*.9,.38,1.65);}
+renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);setPointer(e);});
+renderer.domElement.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')setPointer(e);});
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+function animate(now){requestAnimationFrame(animate);let dt=Math.min((now-last)/1000,.035);last=now;
+if(playing){
+ let gameDt=dt*(cheats.slow?.45:1);
+ let dx=(keys.arrowleft||keys.a?-1:0)+(keys.arrowright||keys.d?1:0),dy=(keys.arrowup||keys.w?1:0)+(keys.arrowdown||keys.s?-1:0);
+ if(dx||dy){targetX=clamp(targetX+dx*gameDt*5,-2.1,2.1);targetY=clamp(targetY+dy*gameDt*3.5,.38,1.65);}
+ player.position.x+=(targetX-player.position.x)*Math.min(1,gameDt*12);player.position.y+=(targetY-player.position.y)*Math.min(1,gameDt*12);
+ let cpuLevel=cheats.cpu?Number($('cpuRange').value):1;
+ let desired=clamp(ball.position.x*1.08,-2.05,2.05);rival.position.x+=(desired-rival.position.x)*Math.min(1,gameDt*(1.2+cpuLevel*2.6));
+ rival.position.y+=(clamp(.62+(ball.position.y-.8)*.32,.45,1.25)-rival.position.y)*Math.min(1,gameDt*(.8+cpuLevel*1.6));
+ if(serveTimer>0)serveTimer-=gameDt;else{
+  ballVel.y-=.32*gameDt;let speedFactor=cheats.speed?Number($('speedRange').value):1;ball.position.addScaledVector(ballVel,gameDt*5.5*speedFactor);
+  if(ball.position.y<.22&&ballVel.y<0){ball.position.y=.22;ballVel.y=Math.abs(ballVel.y)*.78;}
+  if(ball.position.x<-2.55||ball.position.x>2.55){ball.position.x=clamp(ball.position.x,-2.55,2.55);ballVel.x*=-.82;}
+  // Player paddle collision
+  if(ballVel.z>0&&ball.position.z>4.02&&ball.position.z<4.7&&hitCooldown<=0){
+   if(Math.abs(ball.position.x-player.position.x)<.76&&Math.abs(ball.position.y-player.position.y)<.62){
+    ball.position.z=3.98;
+    if(shotType==='smash'&&ball.position.y>1.0){let smashPower=cheats.smash?-.62:-.27;ballVel.z=smashPower;ballVel.y=cheats.smash?-.09:-.02;spinY=.12;hint.textContent=cheats.smash?'超強力スマッシュ！！':'強烈なスマッシュ！';}
+    else{ballVel.z=-.17;ballVel.y=clamp((ball.position.y-player.position.y)*.08,.025,.13);spinY=.10;hint.textContent='ドライブ！';}
+    ballVel.x=clamp((ball.position.x-player.position.x)*.15,-.16,.16)+(keys.arrowleft||keys.a?-.025:0)+(keys.arrowright||keys.d?.025:0);
+    spinX+=(ball.position.x-player.position.x)*.05;hitCooldown=.2;
+   }else if(ball.position.z>4.65){point('cpu');}
+  }
+  // CPU paddle
+  if(ballVel.z<0&&ball.position.z< -4.02&&ball.position.z>-4.7&&hitCooldown<=0){
+   if(Math.abs(ball.position.x-rival.position.x)<.75&&Math.abs(ball.position.y-rival.position.y)<.58){
+    ball.position.z=-3.98;ballVel.z=Math.max(.15,Math.abs(ballVel.z));
+    if(cheats.cpu){let cpuAccuracy=Number($('cpuRange').value);ballVel.x=clamp(ballVel.x+(Math.random()-.5)*(.16-cpuAccuracy*.05),-.18,.18);}
+    ballVel.x=clamp((ball.position.x-rival.position.x)*.12+(Math.random()-.5)*.05,-.14,.14);
+    ballVel.y=clamp(.035+Math.random()*.08,-.01,.12);
+    spinX+=(Math.random()-.5)*.12;spinY=(Math.random()-.5)*.16;hitCooldown=.2;
+   }else if(ball.position.z< -4.65){point('you');}
+  }
+  hitCooldown=Math.max(0,hitCooldown-gameDt);
+  if(ball.position.z>5.2)point('cpu');if(ball.position.z< -5.2)point('you');
+ }
+ ball.rotation.x+=ballVel.z*.08;ball.rotation.z-=ballVel.x*.08;
+ shadow.position.x=ball.position.x;shadow.position.z=ball.position.z;shadow.material.opacity=clamp(.38-ball.position.y*.12,.08,.3);
+}
+renderer.render(scene,camera);
+}
+requestAnimationFrame(animate);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+})();
+</script>
+</body></html>
